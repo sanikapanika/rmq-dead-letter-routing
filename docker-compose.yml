@@ -1,0 +1,54 @@
+version: '3.0'
+
+networks:
+  rabbitmq-internal-network:
+    driver: bridge
+
+services:
+  rabbit1:
+    image: bijukunjummen/rabbitmq-server:3.7.0
+    container_name: rabbit1
+    hostname: rabbit1
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=myuser
+      - RABBITMQ_DEFAULT_PASS=mypass
+    networks:
+      rabbitmq-internal-network:
+        aliases:
+          - rabbitnet1
+  rabbit2:
+    image: bijukunjummen/rabbitmq-server:3.7.0
+    container_name: rabbit2
+    hostname: rabbit2
+    links:
+      - rabbit1
+    environment:
+      - CLUSTERED=true
+      - CLUSTER_WITH=rabbit1
+      - RAM_NODE=true
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    networks:
+      rabbitmq-internal-network:
+        aliases:
+          - rabbitnet2
+  rabbit3:
+    image: bijukunjummen/rabbitmq-server:3.7.0
+    container_name: rabbit3
+    hostname: rabbit3
+    links:
+      - rabbit1
+      - rabbit2
+    environment:
+      - CLUSTERED=true
+      - CLUSTER_WITH=rabbit1
+    ports:
+      - "5674:5672"
+    networks:
+      rabbitmq-internal-network:
+        aliases:
+          - rabbitnet3
