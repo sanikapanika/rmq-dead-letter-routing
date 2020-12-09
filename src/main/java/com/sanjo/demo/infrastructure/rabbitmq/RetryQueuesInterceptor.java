@@ -1,4 +1,4 @@
-package com.sanjo.vaix.entitystream.demo.infrastructure.rabbitmq;
+package com.sanjo.demo.infrastructure.rabbitmq;
 
 import com.rabbitmq.client.Channel;
 import org.aopalliance.intercept.MethodInterceptor;

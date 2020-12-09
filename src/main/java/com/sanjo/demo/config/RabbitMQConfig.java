@@ -1,8 +1,8 @@
-package com.sanjo.vaix.entitystream.demo.config;
+package com.sanjo.demo.config;
 
-import com.sanjo.vaix.entitystream.demo.infrastructure.rabbitmq.EventListener;
-import com.sanjo.vaix.entitystream.demo.infrastructure.rabbitmq.RetryQueues;
-import com.sanjo.vaix.entitystream.demo.infrastructure.rabbitmq.RetryQueuesInterceptor;
+import com.sanjo.demo.infrastructure.rabbitmq.EventListener;
+import com.sanjo.demo.infrastructure.rabbitmq.RetryQueues;
+import com.sanjo.demo.infrastructure.rabbitmq.RetryQueuesInterceptor;
 import org.aopalliance.aop.Advice;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;

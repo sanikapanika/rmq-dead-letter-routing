@@ -1,4 +1,4 @@
-package com.sanjo.vaix.entitystream.demo.infrastructure.rabbitmq;
+package com.sanjo.demo.infrastructure.rabbitmq;
 
 import org.springframework.amqp.rabbit.annotation.Exchange;
 import org.springframework.amqp.rabbit.annotation.Queue;

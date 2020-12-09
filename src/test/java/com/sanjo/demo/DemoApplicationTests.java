@@ -1,4 +1,4 @@
-package com.sanjo.vaix.entitystream.demo;
+package com.sanjo.demo;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

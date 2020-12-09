@@ -1,6 +1,6 @@
-package com.sanjo.vaix.entitystream.demo.runner;
+package com.sanjo.demo.runner;
 
-import com.sanjo.vaix.entitystream.demo.infrastructure.rabbitmq.EventListener;
+import com.sanjo.demo.infrastructure.rabbitmq.EventListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
