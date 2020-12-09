@@ -1,8 +1,6 @@
 package com.sanjo.demo.config;
 
 import com.sanjo.demo.infrastructure.rabbitmq.EventListener;
-import com.sanjo.demo.infrastructure.rabbitmq.RetryQueues;
-import com.sanjo.demo.infrastructure.rabbitmq.RetryQueuesInterceptor;
 import org.aopalliance.aop.Advice;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -88,23 +86,5 @@ public class RabbitMQConfig {
         rabbitTemplate.setConnectionFactory(connectionFactory);
 
         return rabbitTemplate;
-    }
-
-    @Bean
-    SimpleRabbitListenerContainerFactory retryQueueContainerFactory(
-            @Qualifier("connectionFactory") ConnectionFactory connectionFactory,
-            RetryQueuesInterceptor retryQueuesInterceptor) {
-        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
-        factory.setConnectionFactory(connectionFactory);
-
-        Advice[] adviceChain = {retryQueuesInterceptor};
-        factory.setAdviceChain(adviceChain);
-
-        return factory;
-    }
-
-    @Bean
-    public RetryQueues retryQueues() {
-        return new RetryQueues(6, 1000, 3.0, 10000, waitQueue());
     }
 }

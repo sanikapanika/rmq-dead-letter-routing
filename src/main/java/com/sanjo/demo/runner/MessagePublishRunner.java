@@ -1,6 +1,8 @@
 package com.sanjo.demo.runner;
 
 import com.sanjo.demo.infrastructure.rabbitmq.EventListener;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -21,7 +23,13 @@ public class MessagePublishRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         System.out.println("Sending message...");
-        rabbitTemplate.convertAndSend("entity_stream", "r1", "entity message");
+        MessageProperties props = new MessageProperties();
+        props.setHeader("x-retried-count", String.valueOf(0));
+        props.setHeader("x-original-excahnge", "entity_stream");
+        props.setHeader("x-original-routing-key", "r1");
+
+        Message message = new Message("first message".getBytes(), props);
+        rabbitTemplate.send("entity_stream","r1", message);
         eventListener.getLatch().await(10000, TimeUnit.MILLISECONDS);
     }
 }
