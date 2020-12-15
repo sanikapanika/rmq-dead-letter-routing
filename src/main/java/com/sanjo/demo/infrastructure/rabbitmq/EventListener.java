@@ -1,48 +1,38 @@
 package com.sanjo.demo.infrastructure.rabbitmq;
 
-import com.rabbitmq.client.Channel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.rabbit.annotation.Exchange;
-import org.springframework.amqp.rabbit.annotation.Queue;
-import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CountDownLatch;
 
 @Component
 public class EventListener {
 
-    private CountDownLatch latch = new CountDownLatch(1);
+    @Value("${rabbitmq.max-retries}")
+    private Integer maxRetries;
     private final RabbitTemplate rabbitTemplate;
+    private static final Logger log = LoggerFactory.getLogger(EventListener.class);
 
     public EventListener(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    @RabbitListener(containerFactory = "rabbitListenerContainerFactory", ackMode = "MANUAL", bindings = @QueueBinding(value = @Queue(value = "event", durable = "true"),
-            exchange = @Exchange(value = "entity_stream",
-                    ignoreDeclarationExceptions = "true",
-                    type = "topic"),
-            key = "r1"))
-    public void receiveEvent(Message message, Channel channel) throws Exception {
-        System.out.println("Received: <" + new String(message.getBody()) + ">");
-        latch.countDown();
-
-        if (Integer.parseInt(message.getMessageProperties().getHeader("x-retried-count")) >= 6) {
-            channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
-        } else {
-            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-            int retries = Integer.parseInt(message.getMessageProperties().getHeader("x-retried-count"));
-            retries++;
-            message.getMessageProperties().setHeader("x-retried-count", String.valueOf(retries));
-            rabbitTemplate.send("dead_letter_event", "r1", message);
+    @RabbitListener(queues = "event", containerFactory = "listenerContainerFactory")
+    public void receiveEvent(Message message) {
+        log.info("Received message: {}", message.toString());
+        Integer retriesCnt = (Integer) message.getMessageProperties().getHeaders().get("x-retries-count");
+        if (retriesCnt == null)
+            retriesCnt = 1;
+        if (retriesCnt > maxRetries) {
+            log.info("Message acked.");
+            return;
         }
-    }
-
-
-    public CountDownLatch getLatch() {
-        return latch;
+        log.info("Rejected. Retrying message for the {}. time", retriesCnt);
+        message.getMessageProperties().getHeaders().put("x-retries-count", ++retriesCnt);
+        rabbitTemplate.send("event.dlx", "r1", message);
     }
 }

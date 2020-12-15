@@ -1,90 +1,59 @@
 package com.sanjo.demo.config;
 
-import com.sanjo.demo.infrastructure.rabbitmq.EventListener;
-import org.aopalliance.aop.Advice;
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.boot.autoconfigure.amqp.RabbitProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-
-import java.util.HashMap;
-import java.util.Map;
 
 
 @Configuration
 public class RabbitMQConfig {
 
-    public final Environment env;
+    private final RabbitProperties properties;
 
-    public RabbitMQConfig(Environment env) {
-        this.env = env;
-    }
-
-
-    @Bean
-    public Queue eventQueue() {
-        return new Queue("event");
+    public RabbitMQConfig(RabbitProperties properties) {
+        this.properties = properties;
     }
 
     @Bean
-    public Queue waitQueue() {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", "dead_letter_event");
-        args.put("x-dead-letter-routing-key", "r2");
-        args.put("x-message-ttl", 10000);
-        return new Queue("wait", true, false, false, args);
+    public ConnectionFactory defaultConnectionFactory() {
+        com.rabbitmq.client.ConnectionFactory connectionFactory = new com.rabbitmq.client.ConnectionFactory();
+        connectionFactory.setUsername(properties.getUsername());
+        connectionFactory.setPassword(properties.getPassword());
+        connectionFactory.setAutomaticRecoveryEnabled(true);
+        connectionFactory.setNetworkRecoveryInterval(5000);
+
+        CachingConnectionFactory cachingConnectionFactory = new CachingConnectionFactory(connectionFactory);
+        cachingConnectionFactory.setHost(properties.getHost());
+        cachingConnectionFactory.setPort(properties.getPort());
+        cachingConnectionFactory.setCacheMode(CachingConnectionFactory.CacheMode.CHANNEL);
+
+        return cachingConnectionFactory;
     }
 
     @Bean
-    TopicExchange entityStreamExchange() {
-        return new TopicExchange("entity_stream");
+    public SimpleRabbitListenerContainerFactory listenerContainerFactory() {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(defaultConnectionFactory());
+        factory.setConcurrentConsumers(2);
+        factory.setMaxConcurrentConsumers(5);
+        factory.setDefaultRequeueRejected(false);
+
+        return factory;
+    }
+
+    @Bean("defaultAdmin")
+    public RabbitAdmin defaultAdmin() {
+        return new RabbitAdmin(defaultConnectionFactory());
     }
 
     @Bean
-    TopicExchange deadLetterEventExchange() {
-        return new TopicExchange("dead_letter_event");
-    }
-
-    @Bean
-    MessageListenerAdapter eventListenerBean(@Qualifier("eventListener") EventListener eventListener) {
-        return new MessageListenerAdapter(eventListener, "receiveEvent");
-    }
-
-    @Bean
-    Binding DLQToDLXBinding() {
-        return BindingBuilder.bind(waitQueue()).to(deadLetterEventExchange()).with("r1");
-    }
-
-    @Bean
-    Binding EQtoDLXBinding() {
-        return BindingBuilder.bind(eventQueue()).to(deadLetterEventExchange()).with("r2");
-    }
-
-    @Bean
-    ConnectionFactory connectionFactory() {
-        CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
-        connectionFactory.setUsername("myuser");
-        connectionFactory.setPassword("mypass");
-        connectionFactory.setHost("127.0.0.1");
-        connectionFactory.setPort(5672);
-
-        return connectionFactory;
-    }
-
-    @Bean
-    RabbitTemplate rabbitTemplate(@Qualifier("connectionFactory") ConnectionFactory connectionFactory) {
-        RabbitTemplate rabbitTemplate = new RabbitTemplate();
-        rabbitTemplate.setConnectionFactory(connectionFactory);
-
-        return rabbitTemplate;
+    public Jackson2JsonMessageConverter producerJackson2MessageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }
